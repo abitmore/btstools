@@ -1,0 +1,11 @@
+sudo apt-get install openssl libssl-dev
+
+sudo apt-get install g++
+
+# install via VPN (files are on s3.amazon)
+sudo gem install -V faye-websocket
+
+#reinstall after libssl-dev installed 
+#if 'Encryption not available on this event-machine'
+#sudo gem install -V eventmachine
+

@@ -1,0 +1,27 @@
+# Install curl
+sudo apt-get install curl
+
+# Install mpapis public key (might need `gpg2` and or `sudo`)
+gpg --keyserver hkp://keys.gnupg.net --recv-keys D39DC0E3
+
+# Download the installer
+\curl -O https://raw.githubusercontent.com/wayneeseguin/rvm/master/binscripts/rvm-installer
+\curl -O https://raw.githubusercontent.com/wayneeseguin/rvm/master/binscripts/rvm-installer.asc
+
+# Verify the installer signature (might need `gpg2`)
+gpg --verify rvm-installer.asc
+
+# Run the installer
+bash rvm-installer stable
+
+# Edit .bashrc, add . /etc/profile.d/rvm.sh
+# Edit /etc/group, add users to rvm group
+
+# Install ruby
+rvm install ruby 2.2.0
+
+# Install peatio_client
+gem install -V peatio_client
+
+# Install httpclient
+gem install -V httpclient
