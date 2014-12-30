@@ -3,52 +3,58 @@
 require "active_support"
 require 'peatio_client'
 
-def fetch_yunbi
+require_relative "myfunc"
 
-client_public = PeatioAPI::Client.new endpoint: 'https://yunbi.com'
+def fetch_yunbi (a1="bts",a2="cny",max_orders=5)
+  
+  client_public = PeatioAPI::Client.new endpoint: 'https://yunbi.com'
+  
+  #p client_public.get_public '/api/v2/markets'
+  #p client_public.get_public '/api/v2/tickers'
+  #p client_public.get_public '/api/v2/tickers/btsxcny'
 
-#p client_public.get_public '/api/v2/markets'
-#p client_public.get_public '/api/v2/tickers'
-#p client_public.get_public '/api/v2/tickers/btsxcny'
-
-order_book = client_public.get_public '/api/v2/order_book', {"market":"btsxcny", "asks_limit":10, "bids_limit":10}
-ob = order_book
-
-#parsed_order_book = JSON.parse ob
-#pob = parsed_order_book
-
-bids = ob["bids"].sort_by {|e| e["price"].to_f}.reverse
-asks = ob["asks"].sort_by {|e| e["price"].to_f}.reverse
-
-[asks,bids]
-
-end
-
-def print_yunbi
-  ob = fetch_yunbi
-
-  asks = ob[0]
-  bids = ob[1]
-
-  puts " asks "
-  puts " price  remaining_volume "
-    asks.each do |o|
-    print o["price"], "\t", o["remaining_volume"]
-    puts
+  base = a2
+  quote = (a1 == "bts" ? "btsx" : a1)
+  market=quote+base
+  
+  order_book = client_public.get_public '/api/v2/order_book', {"market":market, "asks_limit":max_orders, "bids_limit":max_orders}
+  ob = order_book
+  
+  #parsed_order_book = JSON.parse ob
+  #pob = parsed_order_book
+  
+  asks = ob["asks"].sort_by {|e| e["price"].to_f}
+  bids = ob["bids"].sort_by {|e| e["price"].to_f}.reverse
+  
+  asks_new=[]
+  bids_new=[]
+  asks.each do |e|
+    item = {"price"=>e["price"],"volume"=>e["remaining_volume"]}
+    asks_new.push item
+  end
+  bids.each do |e|
+    item = {"price"=>e["price"],"volume"=>e["remaining_volume"]}
+    bids_new.push item
   end
 
-  puts " bids "
-  puts " price  remaining_volume "
-  bids.each do |o|
-    print o["price"], "\t", o["remaining_volume"]
-    puts
-  end
-
+  #return
+  ret={	\
+    "source"=>"yunbi",	\
+    "base"=>a2,		\
+    "quote"=>a1,	\
+    "asks"=>asks_new,	\
+    "bids"=>bids_new	\
+  }
+   
 end
 
-#puts JSON.pretty_generate order_book
 
+#main
 if __FILE__ == $0
-  print_yunbi
+  if ARGV[0]
+    ob = fetch_yunbi ARGV[0], ARGV[1]
+  else
+    ob = fetch_yunbi
+  end
+  print_order_book ob
 end
-
