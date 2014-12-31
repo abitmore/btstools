@@ -73,7 +73,7 @@ def fetch_chain (a1="bts",a2="cny",max_orders=5)
   
   #return
   ret={
-    "source"=>"BLOCK CHAIN",
+    "source"=>"chain",
     "base"=>a2,
     "quote"=>a1,
     "asks"=>asks_new,
