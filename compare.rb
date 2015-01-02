@@ -28,10 +28,10 @@ def compare_ob (ob1, ob2)
 
   # delete the orders won't match
   # the result may overlap
-  o1["asks"].delete_if { |e| o2["bids"].empty? || e["price"].to_f > o2["bids"][0]["price"].to_f }
-  o1["bids"].delete_if { |e| o2["asks"].empty? || e["price"].to_f < o2["asks"][0]["price"].to_f }
-  o2["asks"].delete_if { |e| o1["bids"].empty? || e["price"].to_f > o1["bids"][0]["price"].to_f }
-  o2["bids"].delete_if { |e| o1["asks"].empty? || e["price"].to_f < o1["asks"][0]["price"].to_f }
+  o1["asks"].delete_if { |e| o2["bids"].empty? || e["price"].to_f >= o2["bids"][0]["price"].to_f }
+  o1["bids"].delete_if { |e| o2["asks"].empty? || e["price"].to_f <= o2["asks"][0]["price"].to_f }
+  o2["asks"].delete_if { |e| o1["bids"].empty? || e["price"].to_f >= o1["bids"][0]["price"].to_f }
+  o2["bids"].delete_if { |e| o1["asks"].empty? || e["price"].to_f <= o1["asks"][0]["price"].to_f }
 
   return [o1,o2]
     
@@ -58,9 +58,14 @@ def fetch_all (a1="bts",a2="cny",max_orders=5)
   obs = []
 
   markets.each do |m|
+    begin
     #if "method" == defined? "fetch_"+m
       obs.push send "fetch_"+m, a1, a2, max_orders
     #end
+    rescue Exception => e
+      print "fetch_"+m+" error: "
+      puts e
+    end
   end
 
   #compare_ob obs[0], obs[2]
@@ -68,8 +73,56 @@ def fetch_all (a1="bts",a2="cny",max_orders=5)
 
 end
 
+# calculate profit base on compared result
+def calc_profit (obs)
+    bids = obs[0]["bids"].clone
+    asks = obs[1]["asks"].clone
+    if bids.empty? # || asks.empty
+      return 0
+    end
+
+    profit = 0
+    volume = 0
+    bid_index = 0
+    ask_index = 0
+    while bid_index < bids.size && ask_index < asks.size 
+      bid_price = bids[bid_index]["price"].to_f
+      ask_price = asks[ask_index]["price"].to_f
+      if bid_price <= ask_price
+        break
+      end
+      bid_volume = bids[bid_index]["volume"].to_f
+      ask_volume = asks[ask_index]["volume"].to_f
+      if bid_volume < ask_volume
+        profit += (bid_volume*(bid_price-ask_price))
+        volume += bid_volume
+        asks[ask_index]["volume"] = ask_volume - bid_volume
+        bid_index += 1
+      elsif bid_volume == ask_volume
+        profit += (bid_volume*(bid_price-ask_price))
+        volume += bid_volume
+        bid_index += 1
+        ask_index += 1
+      else # if bid_volume > ask_volume
+        profit += (ask_volume*(bid_price-ask_price))
+        volume += ask_volume
+        bids[bid_index]["volume"] = bid_volume - ask_volume
+        ask_index += 1
+      end
+    end
+
+    return {"volume"=>volume, "profit"=>profit}
+
+end
+
 #main
 if __FILE__ == $0
   result = fetch_all
-  puts JSON.pretty_generate result
+  #puts result
+  if result
+    puts calc_profit result
+    puts JSON.pretty_generate result
+  else
+    puts "no result"
+  end
 end
