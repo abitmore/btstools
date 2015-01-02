@@ -14,17 +14,16 @@ def new_yunbi_pub_client
   client_public = PeatioAPI::Client.new endpoint: 'https://yunbi.com'
 end
 
-def fetch_yunbi (a1="bts",a2="cny",max_orders=5)
-  yunbi_fetch a1, a2, max_orders
+def fetch_yunbi (quote="bts", base="cny", max_orders=5)
+  yunbi_fetch quote:quote, base:base, max_orders:max_orders
 end
 
-def yunbi_fetch (a1="bts",a2="cny",max_orders=5)
+def yunbi_fetch (quote:"bts", base:"cny", max_orders:5)
   
   client_public = new_yunbi_pub_client
   
-  base = a2
-  quote = (a1 == "bts" ? "btsx" : a1)
-  market=quote+base
+  new_quote = (quote == "bts" ? "btsx" : quote)
+  market = new_quote + base
   
   order_book = client_public.get_public '/api/v2/order_book', {"market":market, "asks_limit":max_orders, "bids_limit":max_orders}
   ob = order_book
@@ -46,8 +45,8 @@ def yunbi_fetch (a1="bts",a2="cny",max_orders=5)
   #return
   {
     "source"=>"yunbi",
-    "base"=>a2,	
-    "quote"=>a1,
+    "base"=>base,
+    "quote"=>quote,
     "asks"=>asks_new,
     "bids"=>bids_new
   }
