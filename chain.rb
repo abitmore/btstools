@@ -59,8 +59,9 @@ def fetch_chain (a1="bts",a2="cny",max_orders=5)
   asks.each do |e|
     item = {
       "price"=>e["market_index"]["order_price"]["ratio"].to_f*a1_precision/a2_precision,
-      "volume"=>e["state"]["balance"].to_f/a2_precision
+      "volume"=>e["state"]["balance"].to_f/a1_precision
     }
+    #item["volume"] /= item["price"]
     asks_new.push item
   end
   bids.each do |e|
@@ -68,6 +69,7 @@ def fetch_chain (a1="bts",a2="cny",max_orders=5)
       "price"=>e["market_index"]["order_price"]["ratio"].to_f*a1_precision/a2_precision,
       "volume"=>e["state"]["balance"].to_f/a2_precision
     }
+    item["volume"] /= item["price"]
     bids_new.push item
   end
   
