@@ -114,23 +114,28 @@ def yunbi_orders (quote:"bts", base:"cny", type:"all")
  
 end
 
-def yunbi_cancel_order (id)
+# parameter base is to be compatible with btc38
+def yunbi_cancel_order (id:0, base:nil)
+  if 0 == id
+    return nil
+  end
   client = new_yunbi_client
   client.post '/api/v2/order/delete', {"id":id}
 end
 
-def yunbi_cancel_orders (ids)
+# parameter base is to be compatible with btc38
+def yunbi_cancel_orders (ids:[], base:nil)
   client = new_yunbi_client
   ids.each { |id| client.post '/api/v2/order/delete', {"id":id} }
 end
 
 def yunbi_cancel_orders_by_type (quote:"bts", base:"cny", type:"all")
   orders = yunbi_orders quote:quote, base:base, type:type
-  orders["asks"].each {|e| yunbi_cancel_order e["id"]}
-  orders["bids"].each {|e| yunbi_cancel_order e["id"]}
+  orders["asks"].each {|e| yunbi_cancel_order id:e["id"]}
+  orders["bids"].each {|e| yunbi_cancel_order id:e["id"]}
 end
 
-def yunbi_cancel_all_orders
+def yunbi_cancel_all_orders (quote:nil, base:nil)
   client = new_yunbi_client
   orders = client.post '/api/v2/orders/clear'
 end
