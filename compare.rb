@@ -111,7 +111,7 @@ def calc_profit (obs)
       end
     end
 
-    return {"volume"=>volume, "profit"=>profit}
+    return {"volume"=>("%.6f" % volume), "profit"=>("%.6f" % profit), obs[1]["source"]=>obs[0]["source"]}
 
 end
 
