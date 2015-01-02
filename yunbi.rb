@@ -63,6 +63,10 @@ def yunbi_balance
   my_balance=Hash.new
   my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f - e["locked"].to_f }
 
+  if my_balance["bts"].nil?
+    my_balance.store "bts", my_balance["btsx"]
+  end
+
   return my_balance
 
 end
