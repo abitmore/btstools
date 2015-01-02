@@ -15,14 +15,18 @@ def print_order_book (ob)
   #puts JSON.pretty_generate order_book
 
   puts " SOURCE: "+src
-  puts " asks "+quot+"/"+base
+  puts " MARKET: "+quot+"/"+base
+
+  puts
+  puts " asks"
   puts "price   volume "
     asks.reverse.each do |o|
     print ("%.12f" % o["price"]).sub(/0*$/,"").sub(/\.$/,""), "\t", ("%.8f" % o["volume"]).sub(/0*$/,"").sub(/\.$/,"")
     puts
   end
 
-  puts " bids "+quot+"/"+base
+  puts
+  puts " bids"
   puts "price   volume "
   bids.each do |o|
     print ("%.12f" % o["price"]).sub(/0*$/,"").sub(/\.$/,""), "\t", ("%.8f" % o["volume"]).sub(/0*$/,"").sub(/\.$/,"")
