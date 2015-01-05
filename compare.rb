@@ -4,6 +4,7 @@ require_relative "yunbi"
 require_relative "btc38"
 require_relative "bter"
 require_relative "chain"
+require_relative "config"
 
 ###########################################
 # compare all markets and look for chances
@@ -53,7 +54,7 @@ end
 # fetch order books from all markets, and compare between them
 def fetch_all (a1="bts",a2="cny",max_orders=5)
 
-  markets = ["yunbi", "btc38", "chain", "bter"]
+  markets = my_compare_markets
 
   obs = []
 
