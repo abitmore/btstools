@@ -12,3 +12,9 @@ while i <= 9
   i += 1
 end
 
+for i in 1 .. 9
+  for j in 1 .. i
+    print j, '*', i, '=', j*i, ' '
+  end
+  puts
+end
