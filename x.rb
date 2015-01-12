@@ -18,3 +18,10 @@ for i in 1 .. 9
   end
   puts
 end
+
+(1..9).each{ |i| 
+  (1..i).each{ |j|
+    print j, '*', i, '=', j*i, ' '
+  }
+  puts
+}
