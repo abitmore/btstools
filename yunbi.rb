@@ -5,6 +5,7 @@ require 'peatio_client'
 
 require_relative "config"
 require_relative "myfunc"
+require_relative "mylogger"
 
 def new_yunbi_client
   client = PeatioAPI::Client.new endpoint: 'https://yunbi.com', access_key: my_yunbi_access_key, secret_key: my_yunbi_secret_key
@@ -163,6 +164,22 @@ def yunbi_ask (quote:"bts", base:"cny", price:nil, volume:nil)
   yunbi_new_order quote:quote, base:base, type:"ask", price:price, volume:volume
 end
 
+def yunbi_submit_orders (orders:nil, quote:"bts", base:"cny")
+  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+
+  return nil if orders.nil? or orders.empty?
+
+  orders.each { |e|
+    case e["type"]
+    when "cancel"
+      yunbi_cancel_order id:e["id"]
+    when "ask", "bid"
+      yunbi_new_order quote:(e["quote"] or quote), base:(e["base"] or base), type:e["type"], price:e["price"], volume:e["volume"]
+    end
+  }
+
+end
+
 #main
 if __FILE__ == $0
   if ARGV[0]
@@ -171,4 +188,6 @@ if __FILE__ == $0
     ob = fetch_yunbi
   end
   print_order_book ob
+  puts
+  puts JSON.pretty_generate yunbi_balance.delete_if { |key,value| value == 0.0 or key == "btsx" }
 end

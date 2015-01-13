@@ -6,6 +6,7 @@ require "digest"
 
 require_relative "myfunc"
 require_relative "config"
+require_relative "mylogger"
 
 ####################################
 # btc38 data update every 15 seconds
@@ -285,6 +286,21 @@ def btc38_ask (quote:"bts", base:"cny", price:nil, volume:nil)
   btc38_new_order quote:quote, base:base, type:"ask", price:price, volume:volume
 end
 
+def btc38_submit_orders (orders:nil, quote:"bts", base:"cny")
+  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+
+  return nil if orders.nil? or orders.empty?
+
+  orders.each { |e|
+    case e["type"]
+    when "cancel"
+      btc38_cancel_order id:e["id"], base:base
+    when "ask", "bid"
+      btc38_new_order quote:(e["quote"] or quote), base:(e["base"] or base), type:e["type"], price:e["price"], volume:e["volume"]
+    end
+  }
+
+end
 
 
 #main
@@ -295,4 +311,6 @@ if __FILE__ == $0
     ob = fetch_btc38
   end
   print_order_book ob
+  puts
+  puts JSON.pretty_generate btc38_balance
 end
