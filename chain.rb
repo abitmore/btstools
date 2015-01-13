@@ -243,7 +243,7 @@ end
 def chain_cancel_order (id:nil, base:"cny")
   #$LOG.debug (self.class.name.to_s+'.'+method(__method__).name) { method(__method__).parameters.map }
   #$LOG.debug (method(__method__).name) { method(__method__).parameters.map { |arg| "#{arg} = #{eval arg}" }.join(', ')}
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if id.nil?
     return
   end
@@ -257,7 +257,7 @@ end
 
 # parameter base is to be compatible with btc38
 def chain_cancel_orders (ids:[], base:"cny")
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if ids.nil? or ids.empty?
     return
   end
@@ -283,7 +283,7 @@ def chain_cancel_all_orders (quote:"bts", base:"cny")
 end
 
 def chain_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil, cancel_order_id:nil)
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if "bid" == type
     chain_bid quote:quote, base:base, price:price, volume:volume
   elsif "ask" == type
@@ -294,7 +294,7 @@ def chain_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil, c
 end
 
 def chain_submit_orders (orders:[],quote:"bts",base:"cny")
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   if orders.nil? or orders.empty?
     return nil
@@ -330,7 +330,7 @@ def chain_submit_orders (orders:[],quote:"bts",base:"cny")
 end
 
 def chain_bid (quote:"bts", base:"cny", price:nil, volume:nil)
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   if price.nil? or volume.nil?
     return nil
@@ -350,7 +350,7 @@ def chain_bid (quote:"bts", base:"cny", price:nil, volume:nil)
 end
 
 def chain_ask (quote:"bts", base:"cny", price:nil, volume:nil)
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   if price.nil? or volume.nil?
     return nil
@@ -411,6 +411,8 @@ if __FILE__ == $0
   else
     ob = fetch_chain
     print_order_book ob
+    puts
+    puts JSON.pretty_generate chain_balance
   end
 
 end

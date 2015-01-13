@@ -220,8 +220,10 @@ def btc38_cancel_order (id:0, base:"cny")
     content = resp.content.force_encoding("UTF-8")
     # remove UTF-8 BOM
     content.sub!(/^\xEF\xBB\xBF/,'')
+    $LOG.debug (method(__method__).name) { {"return"=>content } }
     return content
   else
+    $LOG.debug (method(__method__).name) { {"return"=>nil } }
     return ""
   end
 end
@@ -241,6 +243,7 @@ def btc38_cancel_all_orders (quote:"bts", base:"cny")
 end
 
 def btc38_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if type.nil? or price.nil? or volume.nil?
     return false
   end
@@ -273,6 +276,7 @@ def btc38_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
   content = resp.content.force_encoding("UTF-8")
   # remove UTF-8 BOM
   content.sub!(/^\xEF\xBB\xBF/,'')
+  $LOG.debug (method(__method__).name) { {"return"=>content } }
   #puts content
   return content
 
@@ -287,7 +291,7 @@ def btc38_ask (quote:"bts", base:"cny", price:nil, volume:nil)
 end
 
 def btc38_submit_orders (orders:nil, quote:"bts", base:"cny")
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   return nil if orders.nil? or orders.empty?
 

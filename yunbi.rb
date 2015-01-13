@@ -121,13 +121,15 @@ def yunbi_cancel_order (id:0, base:nil)
     return nil
   end
   client = new_yunbi_client
-  client.post '/api/v2/order/delete', {"id":id}
+  response = client.post '/api/v2/order/delete', {"id":id}
+  $LOG.debug (method(__method__).name) { {"return"=>response} }
+  return response
 end
 
 # parameter base is to be compatible with btc38
 def yunbi_cancel_orders (ids:[], base:nil)
-  client = new_yunbi_client
-  ids.each { |id| client.post '/api/v2/order/delete', {"id":id} }
+  #client = new_yunbi_client
+  ids.each { |id| yunbi_cancel_order id:id }
 end
 
 def yunbi_cancel_orders_by_type (quote:"bts", base:"cny", type:"all")
@@ -139,9 +141,13 @@ end
 def yunbi_cancel_all_orders (quote:nil, base:nil)
   client = new_yunbi_client
   orders = client.post '/api/v2/orders/clear'
+  $LOG.debug (method(__method__).name) { {"return"=>orders} }
+  return orders
 end
 
 def yunbi_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+
   if type.nil? or price.nil? or volume.nil?
     return
   end
@@ -153,6 +159,8 @@ def yunbi_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
 
   client = new_yunbi_client
   orders = client.post '/api/v2/orders', {"market":market, "side":new_type, "price":price, "volume":volume}
+  $LOG.debug (method(__method__).name) { {"return"=>orders} }
+  return orders
 
 end
 
@@ -165,7 +173,7 @@ def yunbi_ask (quote:"bts", base:"cny", price:nil, volume:nil)
 end
 
 def yunbi_submit_orders (orders:nil, quote:"bts", base:"cny")
-  $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   return nil if orders.nil? or orders.empty?
 
