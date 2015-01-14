@@ -172,19 +172,45 @@ def yunbi_ask (quote:"bts", base:"cny", price:nil, volume:nil)
   yunbi_new_order quote:quote, base:base, type:"ask", price:price, volume:volume
 end
 
+#remind: quote and base in orders are ignored
 def yunbi_submit_orders (orders:nil, quote:"bts", base:"cny")
   $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   return nil if orders.nil? or orders.empty?
 
+  #client.post '/api/v2/orders/multi', market: 'btccny', orders: [{side: 'buy', volume: '0.15', price: '2955.0'}, {side: 'sell', volume: '0.16', price: '2956'}]
+  cancel_ids = []
+  new_orders = [] 
   orders.each { |e|
     case e["type"]
     when "cancel"
-      yunbi_cancel_order id:e["id"]
+      cancel_ids.push e["id"]
     when "ask", "bid"
-      yunbi_new_order quote:(e["quote"] or quote), base:(e["base"] or base), type:e["type"], price:e["price"], volume:e["volume"]
+      type = e["type"]
+      new_type = ((type == "bid" or type == "buy") ? "buy" : "sell")
+      order = { side: new_type, volume: e["volume"].to_s, price: e["price"].to_s }
+      new_orders.push order
+      #yunbi_new_order quote:(e["quote"] or quote), base:(e["base"] or base), type:e["type"], price:e["price"], volume:e["volume"]
     end
   }
+
+  client = new_yunbi_client
+
+  new_quote = (quote == "bts" ? "btsx" : quote)
+  market = new_quote + base
+
+  ret = []
+  #client.post '/api/v2/orders/multi', market: 'btccny', orders: [{side: 'buy', volume: '0.15', price: '2955.0'}, {side: 'sell', volume: '0.16', price: '2956'}]
+  response = client.post '/api/v2/orders/multi', market:market, orders:new_orders
+  $LOG.debug (method(__method__).name) { {"response of new_orders"=>response} }
+  ret.push( {"response_new_orders"=>response} )
+
+  cancel_ids.each { |id|
+    response = yunbi_cancel_order id:id
+    ret.push( {"response_cancel"=>response} )
+  }
+
+  return ret
 
 end
 
