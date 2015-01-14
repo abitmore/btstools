@@ -127,6 +127,8 @@ def calc_profit_with_acc (order_books:[], accounts:{})
     #  max_fill_ask_volume -= acfg["bts"]["min_balance"]
     #end
 
+    min_margin = $MY_TRADE_CONFIG["min_profit_margin"]
+
     profit = 0
     volume = 0 #of quote
     amount = 0 #of base
@@ -137,7 +139,7 @@ def calc_profit_with_acc (order_books:[], accounts:{})
     while bid_index < bids.size and ask_index < asks.size 
       bid_price = bids[bid_index]["price"].to_f
       ask_price = asks[ask_index]["price"].to_f
-      break if bid_price <= ask_price
+      break if bid_price <= ask_price * (1+min_margin)
 
       bid_volume = bids[bid_index]["volume"].to_f
       ask_volume = asks[ask_index]["volume"].to_f
@@ -219,6 +221,7 @@ end
 
 #main
 if __FILE__ == $0
+ begin
   obs,acc = fetch_all_with_acc
   #puts result
   if obs
@@ -235,4 +238,7 @@ if __FILE__ == $0
   else
     puts "no result"
   end
+ rescue Exception => e
+  $LOG.error (method(__method__).name) { e } 
+ end
 end
