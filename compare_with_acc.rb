@@ -81,6 +81,7 @@ def fetch_all_with_acc (quote:"bts",base:"cny",max_orders:5)
       obs.push send m+"_fetch", quote:quote, base:base, max_orders:max_orders
     #end
     rescue Exception => e
+      $LOG.error (method(__method__).name) { e } 
       print "fetch_"+m+" error: "
       puts e
     end
@@ -88,6 +89,7 @@ def fetch_all_with_acc (quote:"bts",base:"cny",max_orders:5)
       account = send m+"_balance"
       acc.store m, account
     rescue Exception => e
+      $LOG.error (method(__method__).name) { e } 
       print m+"_blance error: "
       puts e
     end
@@ -99,11 +101,15 @@ def fetch_all_with_acc (quote:"bts",base:"cny",max_orders:5)
 end
 
 # calculate profit base on compared result
+# parameters: order_books[0] contains bids, order_books[1] contains asks
 def calc_profit_with_acc (order_books:[], accounts:{})
     return 0 if order_books.nil? or order_books.empty? or accounts.nil? or accounts.empty?
 
     obs = order_books
     acc = accounts
+
+    #puts obs
+    #puts acc
 
     bids = obs[0]["bids"].clone
     asks = obs[1]["asks"].clone
@@ -113,19 +119,28 @@ def calc_profit_with_acc (order_books:[], accounts:{})
 
     base = obs[0]["base"]
     quote = obs[0]["quote"]
-    max_fill_bid_volume = acc[obs["sell_to"]][quote] 
-    max_fill_ask_amount = acc[obs["buy_from"]][base]
+    max_fill_bid_volume = acc[obs[0]["source"]][quote] 
+    max_fill_ask_amount = acc[obs[1]["source"]][base]
 
     acfg = $MY_ACCOUNT_CONFIG
 
     #TODO do something if quote != bts
     #TODO fee calculation model needed
-    if obs["sell_to"] == "chain" and quote == "bts"
+    if obs[0]["source"] == "chain" and quote == "bts"
       max_fill_bid_volume -= acfg["bts"]["min_balance"]
     end
     #if obs["buy_from"] == "chain" and quote == "bts"
     #  max_fill_ask_volume -= acfg["bts"]["min_balance"]
     #end
+
+    my_bid_price_adjust = 0
+    my_ask_price_adjust = 0
+    if obs[0]["source"] == "chain"
+      my_ask_price_adjust = 0.000001
+    end
+    if obs[1]["source"] == "chain"
+      my_bid_price_adjust = 0.000001
+    end
 
     min_margin = $MY_TRADE_CONFIG["min_profit_margin"]
 
@@ -137,8 +152,8 @@ def calc_profit_with_acc (order_books:[], accounts:{})
     my_asks = []
     my_bids = []
     while bid_index < bids.size and ask_index < asks.size 
-      bid_price = bids[bid_index]["price"].to_f
-      ask_price = asks[ask_index]["price"].to_f
+      bid_price = bids[bid_index]["price"].to_f - my_ask_price_adjust
+      ask_price = asks[ask_index]["price"].to_f + my_bid_price_adjust
       break if bid_price <= ask_price * (1+min_margin)
 
       bid_volume = bids[bid_index]["volume"].to_f
@@ -172,6 +187,8 @@ def calc_profit_with_acc (order_books:[], accounts:{})
       end
     end
 
+    return nil if volume == 0
+
     return {
       "volume"=>("%.6f" % volume),
       "amount"=>("%.6f" % amount),
@@ -201,20 +218,28 @@ def submit_orders (orders:nil)
   my_orders = orders["orders"]
   return if my_orders.nil? or my_orders.empty?
 
+  my_orders = my_orders.clone
+  #TODO buy before sell? or yunbi/BTC38 before chain?
+  #my_orders.sort_by! { |o| $MY_TRADE_ORDER[o["source"]] }
+
   my_orders.each { |o|
     source = o["source"]
     quote = o["quote"]
     base = o["base"]
     ods = o["bids"].concat o["asks"]
+    response = nil
 
     begin
       $LOG.info (method(__method__).name) { "send " + source + "_submit_orders" } 
       print "send ", source+"_submit_orders", orders:ods, quote:quote, base:base 
       puts
-      send source+"_submit_orders", orders:ods, quote:quote, base:base 
+      response = send source+"_submit_orders", orders:ods, quote:quote, base:base 
+      
     rescue Exception => e
+      $LOG.error (method(__method__).name) { e } 
       print source, "_submit_orders error: "
       puts e
+      return #return if error
     end
   }
 end
@@ -230,7 +255,11 @@ if __FILE__ == $0
       submit_orders orders:my_orders
       puts JSON.pretty_generate my_orders
       # sleep for 15 seconds if submitted chain orders
-      sleep 15 if my_orders["buy_from"] == "chain" or my_orders["sell_to"] == "chain"
+      if my_orders["buy_from"] == "chain" or my_orders["sell_to"] == "chain"
+        sleep 15
+      else
+        sleep 5
+      end
     else
       puts "nil result"
     end
@@ -239,6 +268,6 @@ if __FILE__ == $0
     puts "no result"
   end
  rescue Exception => e
-  $LOG.error (method(__method__).name) { e } 
+  $LOG.error ("compare_with_acc.main") { e } 
  end
 end
