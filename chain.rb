@@ -83,8 +83,8 @@ def chain_fetch (quote:"bts", base:"cny", max_orders:5)
   #puts JSON.pretty_generate ob["result"]
   
   #ask orders and cover orders are in same array. filter invalid short orders here. TODO maybe wrong logic here
-  asks = ob[1].delete_if {|e| e["type"] == "cover_order" and
-                              feed_price > e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision
+  asks = ob[1].delete_if {|e| e["type"] == "cover_order" #and
+                              #feed_price > e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision
                        }.sort_by {|e| e["market_index"]["order_price"]["ratio"].to_f}.first(max_orders)
   bids = ob[0].sort_by {|e| e["market_index"]["order_price"]["ratio"].to_f}.reverse.first(max_orders)
   
@@ -106,6 +106,12 @@ def chain_fetch (quote:"bts", base:"cny", max_orders:5)
     }
     item["volume"] /= item["price"]
     bids_new.push item
+  end
+
+  # if there are orders can be matched, wait until they matched.
+  if not asks_new[0].nil? and not bids_new[0].nil? and asks_new[0]["price"] <= bids_new[0]["price"]
+    asks_new=[]
+    bids_new=[]
   end
   
   #return
