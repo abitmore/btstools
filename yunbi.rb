@@ -62,6 +62,9 @@ def yunbi_balance
   my_accounts = me["accounts"]
 
   my_balance=Hash.new
+
+  return my_balance if my_accounts.nil? or my_accounts.empty?
+
   my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f - e["locked"].to_f }
 
   if my_balance["bts"].nil?
@@ -224,4 +227,5 @@ if __FILE__ == $0
   print_order_book ob
   puts
   puts JSON.pretty_generate yunbi_balance.delete_if { |key,value| value == 0.0 or key == "btsx" }
+  puts yunbi_orders
 end
