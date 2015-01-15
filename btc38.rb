@@ -123,7 +123,8 @@ def btc38_balance
 
   my_balance=Hash.new
   currencies = ["cny", "bts", "btc"]
-  currencies.each { |e| my_balance.store e, balances[e+"_balance"].to_f - balances[e+"_balance_lock"].to_f }
+  #currencies.each { |e| my_balance.store e, balances[e+"_balance"].to_f - balances[e+"_balance_lock"].to_f }
+  currencies.each { |e| my_balance.store e, balances[e+"_balance"].to_f }
 
   return my_balance
 
@@ -317,4 +318,5 @@ if __FILE__ == $0
   print_order_book ob
   puts
   puts JSON.pretty_generate btc38_balance
+  puts btc38_orders
 end
