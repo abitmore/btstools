@@ -65,7 +65,8 @@ def yunbi_balance
 
   return my_balance if my_accounts.nil? or my_accounts.empty?
 
-  my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f - e["locked"].to_f }
+  #my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f - e["locked"].to_f }
+  my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f }
 
   if my_balance["bts"].nil?
     my_balance.store "bts", my_balance["btsx"]
