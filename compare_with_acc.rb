@@ -133,6 +133,7 @@ def calc_profit_with_acc (order_books:[], accounts:{})
     #  max_fill_ask_volume -= acfg["bts"]["min_balance"]
     #end
 
+    # adjust bid/ask price to make sure our order execute
     my_bid_price_adjust = 0
     my_ask_price_adjust = 0
     if obs[0]["source"] == "chain"
@@ -142,11 +143,21 @@ def calc_profit_with_acc (order_books:[], accounts:{})
       my_bid_price_adjust = 0.000001
     end
 
+    # in btc38, when we buy volume, we get (volume*0.999)
+    my_trade_volume_adjust = 1
+    if obs[1]["source"] == "btc38"
+      my_trade_volume_adjust = 0.999
+    end
+
     min_margin = $MY_TRADE_CONFIG["min_profit_margin"]
 
     profit = 0
     volume = 0 #of quote
     amount = 0 #of base
+    my_ask_volume = 0 #of quote
+    my_bid_volume = 0 #of quote
+    my_ask_amount = 0 #of base
+    my_bid_amount = 0 #of base
     bid_index = 0
     ask_index = 0
     my_asks = []
@@ -156,9 +167,22 @@ def calc_profit_with_acc (order_books:[], accounts:{})
       ask_price = asks[ask_index]["price"].to_f + my_bid_price_adjust
       break if bid_price <= ask_price * (1+min_margin)
 
-      bid_volume = bids[bid_index]["volume"].to_f
-      ask_volume = asks[ask_index]["volume"].to_f
-      min_volume = [bid_volume, ask_volume,  max_fill_bid_volume-volume, (max_fill_ask_amount-amount)/ask_price].each.min
+      bid_volume = bids[bid_index]["volume"].to_f # how many others want to buy
+      ask_volume = asks[ask_index]["volume"].to_f # how many others want to sell
+
+      my_fill_bid_volume = bid_volume # how many we will give out if fill the bid order
+      my_fill_ask_volume = ask_volume * my_trade_volume_adjust # how many we will get if fill the ask order
+      my_max_fill_bid_volume = max_fill_bid_volume - my_ask_volume # how many we can sell
+      my_max_fill_ask_volume = (max_fill_ask_amount-amount) / ask_price * my_trade_volume_adjust
+                                                # how many we will get if we can buy all at current price
+
+      my_min_volume = [my_fill_bid_volume, my_fill_ask_volume, my_max_fill_bid_volume, my_max_fill_ask_volume].each.min
+
+      min_volume = [bid_volume, # how many others want to buy
+                    ask_volume, # how many others want to sell
+                    max_fill_bid_volume-volume, # how many we can sell
+                    (max_fill_ask_amount-amount) / ask_price # how many we can buy
+                   ].each.min
 
       # calculate profit
       volume += min_volume
@@ -185,9 +209,53 @@ def calc_profit_with_acc (order_books:[], accounts:{})
         bids[bid_index]["volume"] = bid_volume - min_volume
         ask_index += 1
       end
-    end
+    end #while
 
+    # hard code here to avoid chain order match delay problem. TODO optimize
     return nil if volume == 0
+
+    # hard code here to avoid btc38 one CNY limit. TODO optimize
+    return nil if (amount < 1.1 and (obs[1]["source"] == "btc38" or obs[0]["source"] == "btc38"))
+
+    #combine orders with same price
+    my_new_asks = []
+    my_new_bids = []
+    last_price = -1
+    last_volume = 0
+    my_asks.each { |o|
+      if o["price"] == last_price
+        last_volume += o["volume"]
+      else
+        if last_volume > 0
+          my_ask_item = {"type"=>"ask","price"=>last_price,"volume"=>last_volume}
+          my_new_asks.push my_ask_item
+        end
+        last_price = o["price"]
+        last_volume = o["volume"]
+      end
+    }
+    if last_volume > 0
+      my_ask_item = {"type"=>"ask","price"=>last_price,"volume"=>last_volume}
+      my_new_asks.push my_ask_item
+    end
+    last_price = -1
+    last_volume = 0
+    my_bids.each { |o|
+      if o["price"] == last_price
+        last_volume += o["volume"]
+      else
+        if last_volume > 0
+          my_bid_item = {"type"=>"bid","price"=>last_price,"volume"=>last_volume}
+          my_new_bids.push my_bid_item
+        end
+        last_price = o["price"]
+        last_volume = o["volume"]
+      end
+    }
+    if last_volume > 0
+      my_bid_item = {"type"=>"bid","price"=>last_price,"volume"=>last_volume}
+      my_new_bids.push my_bid_item
+    end
 
     return {
       "volume"=>("%.6f" % volume),
@@ -199,14 +267,14 @@ def calc_profit_with_acc (order_books:[], accounts:{})
          "source"=>obs[1]["source"],
          "base"=>obs[1]["base"],
          "quote"=>obs[1]["quote"],
-         "bids"=>my_bids,
+         "bids"=>my_new_bids,
          "asks"=>[]
       }, {
          "source"=>obs[0]["source"],
          "base"=>obs[0]["base"],
          "quote"=>obs[0]["quote"],
          "bids"=>[],
-         "asks"=>my_asks
+         "asks"=>my_new_asks
       }]
     }
 
