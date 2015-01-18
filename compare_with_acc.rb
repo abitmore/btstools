@@ -304,7 +304,7 @@ def submit_orders (orders:nil)
       print "send ", source+"_submit_orders", orders:ods, quote:quote, base:base 
       puts
       response = send source+"_submit_orders", orders:ods, quote:quote, base:base 
-      
+
     rescue Exception => e
       $LOG.error (method(__method__).name) { e } 
       print source, "_submit_orders error: "
@@ -331,8 +331,11 @@ if __FILE__ == $0
     if not my_orders.nil?
       submit_orders orders:my_orders
       puts JSON.pretty_generate my_orders
-      # sleep for 15 seconds if submitted chain orders
+      # sleep 15 seconds if submitted chain orders (wait for a block)
       if my_orders["buy_from"] == "chain" or my_orders["sell_to"] == "chain"
+        sleep 15
+      # sleep 15 seconds if submitted btc38 orders (btc38 order book refresh every 15 seconds)
+      elsif my_orders["buy_from"] == "btc38" or my_orders["sell_to"] == "btc38"
         sleep 15
       else
         sleep 5
