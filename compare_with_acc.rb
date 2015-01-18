@@ -57,9 +57,11 @@ def compare_obs_with_acc (order_books:[], accounts:{})
 
   # look for max bid price and min ask price
   # delete empty bid market, delete bid market if no enough fund (account < min)
-  max_bid = ar.delete_if { |e| e["bids"].empty? || acc[e["source"]].nil? || acc[e["source"]][quote] < quote_min_balance
+  max_bid = ar.delete_if { |e| e["bids"].empty? || acc[e["source"]].nil? || 
+                               acc[e["source"]][quote].nil? || acc[e["source"]][quote] < quote_min_balance
                          }.each.max_by { |e| e["bids"][0]["price"].to_f }
-  min_ask = ar.delete_if { |e| e["asks"].empty? || acc[e["source"]].nil? || acc[e["source"]][base] < base_min_balance
+  min_ask = ar.delete_if { |e| e["asks"].empty? || acc[e["source"]].nil? || 
+                               acc[e["source"]][base].nil? || acc[e["source"]][base] < base_min_balance
                          }.each.min_by { |e| e["asks"][0]["price"].to_f }
 
   # compare 
@@ -298,7 +300,7 @@ def submit_orders (orders:nil)
     response = nil
 
     begin
-      $LOG.info (method(__method__).name) { "send " + source + "_submit_orders" } 
+      $LOG.debug (method(__method__).name) { "send " + source + "_submit_orders" } 
       print "send ", source+"_submit_orders", orders:ods, quote:quote, base:base 
       puts
       response = send source+"_submit_orders", orders:ods, quote:quote, base:base 
@@ -317,6 +319,13 @@ if __FILE__ == $0
  begin
   obs,acc = fetch_all_with_acc
   #puts result
+  if acc
+    balances_sum = {}
+    #puts acc
+    #acc.each {|market,balances| puts a}
+    acc.each { |market,balances| balances_sum.merge! (balances) {|key,oldval,newval| oldval + newval} }
+    puts JSON.pretty_generate balances_sum.delete_if { |key,value| value == 0.0 or key == "btsx" }
+  end
   if obs
     my_orders = calc_profit_with_acc order_books:obs,accounts:acc
     if not my_orders.nil?
