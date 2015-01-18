@@ -20,9 +20,9 @@ end
 
 $stderr_log = Logger.new(STDERR)
 #$stdout_log = Logger.new(STDOUT)
-$debug_file_log = Logger.new(File.open('logs/debug.log','a'),shift_age = 'hourly')
-$info_file_log = Logger.new(File.open('logs/info.log','a'),shift_age = 'daily')
-$error_file_log = Logger.new(File.open('logs/error.log','a'),shift_age = 'daily')
+$debug_file_log = Logger.new(File.open('logs/debug.log.'+Time.now.strftime('%Y%m%d%H'),'a'),shift_age = 'hourly')
+$info_file_log = Logger.new(File.open('logs/info.log.'+Time.now.strftime('%Y%m%d'),'a'),shift_age = 'daily')
+$error_file_log = Logger.new(File.open('logs/error.log.'+Time.now.strftime('%Y%m%d'),'a'),shift_age = 'daily')
 
 $stderr_log.level = Logger::ERROR
 #$stdout_log.level = Logger::INFO
