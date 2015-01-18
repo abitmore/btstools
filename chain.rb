@@ -419,6 +419,7 @@ if __FILE__ == $0
     print_order_book ob
     puts
     puts JSON.pretty_generate chain_balance
+    puts
     puts chain_orders
   end
 
