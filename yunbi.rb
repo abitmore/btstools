@@ -89,7 +89,20 @@ def yunbi_orders (quote:"bts", base:"cny", type:"all")
   new_quote = (quote == "bts" ? "btsx" : quote)
   market = new_quote + base
 
-  orders = client.get '/api/v2/orders', {"market":market}
+  orders = []
+  begin
+    orders = client.get '/api/v2/orders', {"market":market}
+  rescue Exception => e
+    puts e
+    $LOG.debug (method(__method__).name) { {"error"=>e} }
+    return {
+      "source"=>"yunbi",
+      "base"=>base,
+      "quote"=>quote,
+      "asks"=>[],
+      "bids"=>[]
+    }
+  end
 
   need_ask = ("all" == type or "ask" == type)
   need_bid = ("all" == type or "bid" == type)
@@ -124,10 +137,17 @@ def yunbi_cancel_order (id:0, base:nil)
   if 0 == id
     return nil
   end
-  client = new_yunbi_client
-  response = client.post '/api/v2/order/delete', {"id":id}
-  $LOG.debug (method(__method__).name) { {"return"=>response} }
-  return response
+
+  begin
+    client = new_yunbi_client
+    response = client.post '/api/v2/order/delete', {"id":id}
+    $LOG.debug (method(__method__).name) { {"return"=>response} }
+    return response
+  rescue Exception => e
+    puts e
+    $LOG.debug (method(__method__).name) { {"error"=>e} }
+    return nil
+  end
 end
 
 # parameter base is to be compatible with btc38
@@ -143,10 +163,16 @@ def yunbi_cancel_orders_by_type (quote:"bts", base:"cny", type:"all")
 end
 
 def yunbi_cancel_all_orders (quote:nil, base:nil)
-  client = new_yunbi_client
-  orders = client.post '/api/v2/orders/clear'
-  $LOG.debug (method(__method__).name) { {"return"=>orders} }
-  return orders
+  begin
+    client = new_yunbi_client
+    orders = client.post '/api/v2/orders/clear'
+    $LOG.debug (method(__method__).name) { {"return"=>orders} }
+    return orders
+  rescue Exception => e
+    puts e
+    $LOG.debug (method(__method__).name) { {"error"=>e} }
+    return nil
+  end
 end
 
 def yunbi_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
@@ -161,11 +187,16 @@ def yunbi_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
 
   new_type = ((type == "bid" or type == "buy") ? "buy" : "sell")
 
-  client = new_yunbi_client
-  orders = client.post '/api/v2/orders', {"market":market, "side":new_type, "price":price, "volume":volume}
-  $LOG.debug (method(__method__).name) { {"return"=>orders} }
-  return orders
-
+  begin
+    client = new_yunbi_client
+    orders = client.post '/api/v2/orders', {"market":market, "side":new_type, "price":price, "volume":volume}
+    $LOG.debug (method(__method__).name) { {"return"=>orders} }
+    return orders
+  rescue Exception => e
+    puts e
+    $LOG.debug (method(__method__).name) { {"error"=>e} }
+    return nil
+  end
 end
 
 def yunbi_bid (quote:"bts", base:"cny", price:nil, volume:nil)
@@ -205,13 +236,25 @@ def yunbi_submit_orders (orders:nil, quote:"bts", base:"cny")
 
   ret = []
   #client.post '/api/v2/orders/multi', market: 'btccny', orders: [{side: 'buy', volume: '0.15', price: '2955.0'}, {side: 'sell', volume: '0.16', price: '2956'}]
-  response = client.post '/api/v2/orders/multi', market:market, orders:new_orders
-  $LOG.debug (method(__method__).name) { {"response of new_orders"=>response} }
-  ret.push( {"response_new_orders"=>response} )
+  begin
+    response = client.post '/api/v2/orders/multi', market:market, orders:new_orders
+    $LOG.debug (method(__method__).name) { {"response of new_orders"=>response} }
+    ret.push( {"response_new_orders"=>response} )
+  rescue Exception => e
+    puts e
+    $LOG.debug (method(__method__).name) { {"error of new_orders"=>e} }
+    ret.push( {"response_new_orders"=>e} )
+  end
 
   cancel_ids.each { |id|
-    response = yunbi_cancel_order id:id
-    ret.push( {"response_cancel"=>response} )
+    begin
+      response = yunbi_cancel_order id:id
+      ret.push( {("response_cancel "+id.to_s)=>response} )
+    rescue Exception => e
+      puts e
+      $LOG.debug (method(__method__).name) { {("error of cancel order "+id.to_s)=>e} }
+      ret.push( {("response_cancel "+id.to_s)=>e} )
+    end
   }
 
   return ret
