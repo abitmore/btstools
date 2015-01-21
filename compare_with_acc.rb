@@ -229,11 +229,12 @@ def calc_profit_with_acc (order_books:[], accounts:{})
 
     end #while
 
-    # hard code here to avoid chain order match delay problem. TODO optimize
-    return nil if volume == 0
+    # hard code here to deal with min_margin limit. TODO optimize
+    return nil if my_ask_volume == 0
 
-    # hard code here to avoid btc38 one CNY limit. TODO optimize
-    return nil if (amount < 1.1 and (obs[1]["source"] == "btc38" or obs[0]["source"] == "btc38"))
+    # hard code here to avoid btc38 one CNY limit. TODO optimize. 
+    # FIXME should check every order rather than total amount
+    return nil if (my_ask_amount < 1.1 and (obs[1]["source"] == "btc38" or obs[0]["source"] == "btc38"))
 
     #combine orders with same price
     my_new_asks = []
@@ -350,9 +351,9 @@ if __FILE__ == $0
       # sleep 15 seconds if submitted chain orders (wait for a block)
       if my_orders["buy_from"] == "chain" or my_orders["sell_to"] == "chain"
         sleep 15
-      # sleep 15 seconds if submitted btc38 orders (btc38 order book refresh every 15 seconds)
+      # sleep 60 seconds if submitted btc38 orders (btc38 order book refresh every 15 seconds, but sometimes longer)
       elsif my_orders["buy_from"] == "btc38" or my_orders["sell_to"] == "btc38"
-        sleep 15
+        sleep 60
       else
         sleep 5
       end
