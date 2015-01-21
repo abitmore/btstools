@@ -128,12 +128,15 @@ def calc_profit_with_acc (order_books:[], accounts:{})
 
     #TODO do something if quote != bts
     #TODO fee calculation model needed
-    if obs[0]["source"] == "chain" and quote == "bts"
-      max_fill_bid_volume -= acfg["bts"]["min_balance"]
-    end
+    #if obs[0]["source"] == "chain" and quote == "bts"
+    #  max_fill_bid_volume -= acfg["bts"]["min_balance"]
+    #end
     #if obs["buy_from"] == "chain" and quote == "bts"
     #  max_fill_ask_volume -= acfg["bts"]["min_balance"]
     #end
+    # Keep some balance
+    max_fill_bid_volume -= acfg[quote]["min_balance"]
+    max_fill_ask_amount -= acfg[base]["min_balance"]
 
     # adjust bid/ask price to make sure our order execute
     my_bid_price_adjust = 0
@@ -146,9 +149,15 @@ def calc_profit_with_acc (order_books:[], accounts:{})
     end
 
     # in btc38, when we buy volume, we get (volume*0.999)
-    my_trade_volume_adjust = 1
+    my_bid_volume_adjust = 1
     if obs[1]["source"] == "btc38"
-      my_trade_volume_adjust = 0.999
+      my_bid_volume_adjust = 0.999
+    end
+
+    # in btc38, when we sell volume, we get (volume*price*0.999)
+    my_ask_amount_adjust = 1
+    if obs[0]["source"] == "btc38"
+      my_ask_amount_adjust = 0.999
     end
 
     min_margin = $MY_TRADE_CONFIG["min_profit_margin"]
@@ -173,44 +182,51 @@ def calc_profit_with_acc (order_books:[], accounts:{})
       ask_volume = asks[ask_index]["volume"].to_f # how many others want to sell
 
       my_fill_bid_volume = bid_volume # how many we will give out if fill the bid order
-      my_fill_ask_volume = ask_volume * my_trade_volume_adjust # how many we will get if fill the ask order
+      my_fill_ask_volume = ask_volume * my_bid_volume_adjust # how many we will get if fill the ask order
       my_max_fill_bid_volume = max_fill_bid_volume - my_ask_volume # how many we can sell
-      my_max_fill_ask_volume = (max_fill_ask_amount-amount) / ask_price * my_trade_volume_adjust
+      my_max_fill_ask_volume = (max_fill_ask_amount - my_bid_amount) / ask_price * my_bid_volume_adjust
                                                 # how many we will get if we can buy all at current price
 
-      my_min_volume = [my_fill_bid_volume, my_fill_ask_volume, my_max_fill_bid_volume, my_max_fill_ask_volume].each.min
-
-      min_volume = [bid_volume, # how many others want to buy
-                    ask_volume, # how many others want to sell
-                    max_fill_bid_volume-volume, # how many we can sell
-                    (max_fill_ask_amount-amount) / ask_price # how many we can buy
-                   ].each.min
+      # how many volume we will ask
+      my_min_ask_volume = [my_fill_bid_volume, my_fill_ask_volume, my_max_fill_bid_volume, my_max_fill_ask_volume].each.min
+      # how many volume we will bid. Remark: avoid precision loss
+      my_min_bid_volume = 0
+      if my_min_ask_volume == my_fill_ask_volume
+        my_min_bid_volume = ask_volume
+      elsif my_min_ask_volume == my_max_fill_ask_volume
+        my_min_bid_volume = (max_fill_ask_amount - my_bid_amount) / ask_price
+      else
+        my_min_bid_volume = my_min_ask_volume / my_bid_volume_adjust
+      end
 
       # calculate profit
-      volume += min_volume
-      amount += (min_volume*ask_price)
-      profit += (min_volume*(bid_price-ask_price))
+      my_ask_volume += my_min_ask_volume
+      my_bid_volume += my_min_bid_volume
+      my_ask_amount += my_min_ask_volume * bid_price * my_ask_amount_adjust
+      my_bid_amount += my_min_bid_volume * ask_price
+      profit += (my_ask_amount - my_bid_amount)
 
       # build my orders
-      my_ask_item = {"type"=>"ask","price"=>bid_price,"volume"=>min_volume}
-      my_bid_item = {"type"=>"bid","price"=>ask_price,"volume"=>min_volume}
+      my_ask_item = {"type"=>"ask","price"=>bid_price,"volume"=>my_min_ask_volume}
+      my_bid_item = {"type"=>"bid","price"=>ask_price,"volume"=>my_min_bid_volume}
       my_asks.push my_ask_item
       my_bids.push my_bid_item
 
       # break if no more fund
-      break if min_volume < bid_volume and min_volume < ask_volume
+      break if my_min_ask_volume < my_fill_bid_volume and my_min_ask_volume < my_fill_ask_volume
 
       # if still have fund
-      if bid_volume < ask_volume
-        asks[ask_index]["volume"] = ask_volume - min_volume
+      if my_fill_ask_volume < my_fill_bid_volume
+        asks[ask_index]["volume"] = ask_volume - my_min_bid_volume
         bid_index += 1
-      elsif bid_volume == ask_volume
+      elsif my_fill_ask_volume == my_fill_bid_volume
+        ask_index += 1
         bid_index += 1
+      else #if my_fill_ask_volume > my_fill_bid_volume
         ask_index += 1
-      else # if bid_volume > ask_volume
-        bids[bid_index]["volume"] = bid_volume - min_volume
-        ask_index += 1
+        bids[bid_index]["volume"] = bid_volume - my_min_ask_volume
       end
+
     end #while
 
     # hard code here to avoid chain order match delay problem. TODO optimize
@@ -260,8 +276,8 @@ def calc_profit_with_acc (order_books:[], accounts:{})
     end
 
     return {
-      "volume"=>("%.6f" % volume),
-      "amount"=>("%.6f" % amount),
+      "volume"=>("%.6f" % my_ask_volume),
+      "amount"=>("%.6f" % my_bid_amount),
       "profit"=>("%.6f" % profit),
       "buy_from"=>obs[1]["source"],
       "sell_to"=>obs[0]["source"],
