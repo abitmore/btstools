@@ -29,6 +29,8 @@ def btc38_get (uri:nil)
   rescue Exception => e
     print "btc38_get error: "
     puts e
+    $LOG.debug (method(__method__).name) { {"error"=>e} }
+    return
   end
 end
 
@@ -42,6 +44,8 @@ def btc38_post (uri:nil, data:{})
   rescue Exception => e
     print "btc38_post error: "
     puts e
+    $LOG.debug (method(__method__).name) { {"error"=>e} }
+    return
   end
 end
 
