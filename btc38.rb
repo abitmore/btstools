@@ -269,7 +269,7 @@ def btc38_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
   data["type"] = ("bid" == type ? "1" : "2")
   data["mk_type"] = base
   data["price"] = price
-  data["amount"] = ("%.6f" % volume.to_f)  # up to 6 decimal digits
+  data["amount"] = volume.to_f.round_down(6)  # up to 6 decimal digits
   data["coinname"] = quote
   resp = btc38_post uri:uri, data:data
   #puts resp

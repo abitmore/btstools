@@ -4,6 +4,12 @@
 # functions
 #
 
+class Float
+  def round_down n=0
+    n < 1 ? self.to_i.to_f : (self - 0.5 / 10**n).round(n)
+  end
+end
+
 def print_order_book (ob)
   #ob = fetch_btc38 a1, a2
   src  = ob["source"]
