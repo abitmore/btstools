@@ -175,8 +175,8 @@ def chain_orders (quote:"bts", base:"cny", type:"all")
       "bids"=>[]
   }
 
-  #account = my_chain_config["account"]
-  response_json = chain_command command:"wallet_market_order_list", params:[base.upcase, quote.upcase]
+  account = my_chain_config["account"]
+  response_json = chain_command command:"wallet_market_order_list", params:[base.upcase, quote.upcase, -1, account]
   orders = response_json["result"]
   #puts orders
 
