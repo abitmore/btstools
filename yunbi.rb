@@ -8,11 +8,11 @@ require_relative "myfunc"
 require_relative "mylogger"
 
 def new_yunbi_client
-  client = PeatioAPI::Client.new endpoint: 'https://yunbi.com', access_key: my_yunbi_access_key, secret_key: my_yunbi_secret_key
+  client = PeatioAPI::Client.new endpoint: 'https://yunbi.com', access_key: my_yunbi_access_key, secret_key: my_yunbi_secret_key, timeout: 10
 end
 
 def new_yunbi_pub_client
-  client_public = PeatioAPI::Client.new endpoint: 'https://yunbi.com'
+  client_public = PeatioAPI::Client.new endpoint: 'https://yunbi.com', timeout: 10
 end
 
 def fetch_yunbi (quote="bts", base="cny", max_orders=5)
