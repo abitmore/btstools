@@ -23,8 +23,7 @@ def yunbi_fetch (quote:"bts", base:"cny", max_orders:5)
   
   client_public = new_yunbi_pub_client
   
-  new_quote = (quote == "bts" ? "btsx" : quote)
-  market = new_quote + base
+  market = quote + base
   
   order_book = client_public.get_public '/api/v2/order_book', {"market":market, "asks_limit":max_orders, "bids_limit":max_orders}
   ob = order_book
@@ -68,10 +67,6 @@ def yunbi_balance
   #my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f - e["locked"].to_f }
   my_accounts.each { |e| my_balance.store e["currency"],e["balance"].to_f }
 
-  if my_balance["bts"].nil?
-    my_balance.store "bts", my_balance["btsx"]
-  end
-
   return my_balance
 
 end
@@ -86,8 +81,7 @@ def yunbi_orders (quote:"bts", base:"cny", type:"all")
 
   client = new_yunbi_client
   
-  new_quote = (quote == "bts" ? "btsx" : quote)
-  market = new_quote + base
+  market = quote + base
 
   orders = []
   begin
@@ -182,8 +176,7 @@ def yunbi_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil)
     return
   end
 
-  new_quote = (quote == "bts" ? "btsx" : quote)
-  market = new_quote + base
+  market = quote + base
 
   new_type = ((type == "bid" or type == "buy") ? "buy" : "sell")
 
@@ -231,8 +224,7 @@ def yunbi_submit_orders (orders:nil, quote:"bts", base:"cny")
 
   client = new_yunbi_client
 
-  new_quote = (quote == "bts" ? "btsx" : quote)
-  market = new_quote + base
+  market = quote + base
 
   ret = []
   #client.post '/api/v2/orders/multi', market: 'btccny', orders: [{side: 'buy', volume: '0.15', price: '2955.0'}, {side: 'sell', volume: '0.16', price: '2956'}]
