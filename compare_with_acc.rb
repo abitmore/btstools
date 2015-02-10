@@ -199,12 +199,11 @@ def calc_profit_with_acc (order_books:[], accounts:{})
         my_min_bid_volume = my_min_ask_volume / my_bid_volume_adjust
       end
 
-      # calculate profit
+      # calculate ask/bid volume and amount
       my_ask_volume += my_min_ask_volume
       my_bid_volume += my_min_bid_volume
       my_ask_amount += my_min_ask_volume * bid_price * my_ask_amount_adjust
       my_bid_amount += my_min_bid_volume * ask_price
-      profit += (my_ask_amount - my_bid_amount)
 
       # build my orders
       my_ask_item = {"type"=>"ask","price"=>bid_price,"volume"=>my_min_ask_volume}
@@ -229,57 +228,120 @@ def calc_profit_with_acc (order_books:[], accounts:{})
 
     end #while
 
+    # profit
+    profit = my_ask_amount - my_bid_amount
+
     # hard code here to deal with min_margin limit. TODO optimize
     return nil if my_ask_volume == 0
 
-    # hard code here to avoid btc38 one CNY limit. TODO optimize. 
-    # FIXME should check every order rather than total amount
-    return nil if (my_ask_amount < 1.1 and (obs[1]["source"] == "btc38" or obs[0]["source"] == "btc38"))
+    # hard code here to avoid too small orders, good practice not only for btc38. TODO optimize. 
+    return nil if my_ask_amount < 1.1
 
     #combine orders with same price
+    # combine ask orders
     my_new_asks = []
     my_new_bids = []
-    last_price = -1
+    last_price = 0
     last_volume = 0
     my_asks.each { |o|
       if o["price"] == last_price
         last_volume += o["volume"]
       else
         if last_volume > 0
-          my_ask_item = {"type"=>"ask","price"=>last_price,"volume"=>last_volume}
-          my_new_asks.push my_ask_item
+          last_amount = last_price * last_volume
+          # hard code here to avoid btc38 one CNY limit. TODO optimize. 
+          # check every order 
+          if last_amount < 1.1 and obs[0]["source"] == "btc38"
+            # if amount too small, add volume of this order to next order. do nothing here
+          else
+            my_ask_item = {"type"=>"ask","price"=>last_price,"volume"=>last_volume}
+            my_new_asks.push my_ask_item
+            last_volume = 0
+          end
         end
         last_price = o["price"]
-        last_volume = o["volume"]
+        last_volume += o["volume"]
       end
     }
+    ignore_ask_volume = 0
     if last_volume > 0
-      my_ask_item = {"type"=>"ask","price"=>last_price,"volume"=>last_volume}
-      my_new_asks.push my_ask_item
+      last_amount = last_price * last_volume
+      # hard code here to avoid btc38 one CNY limit. TODO optimize. 
+      # check every order 
+      if last_amount < 1.1 and obs[0]["source"] == "btc38"
+        # if amount too small, and no more order, ignore this order
+        ignore_ask_volume = last_volume
+      else
+        my_ask_item = {"type"=>"ask","price"=>last_price,"volume"=>last_volume}
+        my_new_asks.push my_ask_item
+      end
     end
-    last_price = -1
+    # combine bid orders
+    last_price = 0
     last_volume = 0
+    my_bid_volume_combine_sum = 0
+    my_bid_volume_combine_max = my_bid_volume - ignore_ask_volume / my_bid_volume_adjust
     my_bids.each { |o|
+      bid_end = false
+      if my_bid_volume_combine_sum + o["volume"] >= my_bid_volume_combine_max
+        bid_end = true
+        o["volume"] = my_bid_volume_combine_max - my_bid_volume_combine_sum
+      end
+      my_bid_volume_combine_sum += o["volume"]
       if o["price"] == last_price
         last_volume += o["volume"]
       else
         if last_volume > 0
-          my_bid_item = {"type"=>"bid","price"=>last_price,"volume"=>last_volume}
-          my_new_bids.push my_bid_item
+          last_amount = last_price * last_volume
+          # hard code here to avoid btc38 one CNY limit. TODO optimize. 
+          # check every order 
+          if last_amount < 1.1 and obs[1]["source"] == "btc38"
+            # if amount too small, add volume of this order to next order. do nothing here
+          else
+            my_bid_item = {"type"=>"bid","price"=>last_price,"volume"=>last_volume}
+            my_new_bids.push my_bid_item
+            last_volume = 0
+          end
         end
         last_price = o["price"]
-        last_volume = o["volume"]
+        last_volume += o["volume"]
       end
+      break if bid_end
     }
+    ignore_bid_volume = 0
     if last_volume > 0
-      my_bid_item = {"type"=>"bid","price"=>last_price,"volume"=>last_volume}
-      my_new_bids.push my_bid_item
+      last_amount = last_price * last_volume
+      # hard code here to avoid btc38 one CNY limit. TODO optimize. 
+      # check every order 
+      if last_amount < 1.1 and obs[1]["source"] == "btc38"
+        # if amount too small, and no more order, ignore this order
+        ignore_bid_volume = last_volume
+      else
+        my_bid_item = {"type"=>"bid","price"=>last_price,"volume"=>last_volume}
+        my_new_bids.push my_bid_item
+      end
+    end
+    # adjust ask orders again if ignored at least one bid order
+    if ignore_bid_volume > 0
+      ignore_ask_volume = ignore_bid_volume * my_bid_volume_adjust
+      ask_volume_to_ignore = ignore_ask_volume 
+      for i in ((my_new_asks.length-1)..0)
+        o = my_new_asks[i]
+        if o["volume"] > ask_volume_to_ignore
+          o["volume"] -= ask_volume_to_ignore
+          break
+        else
+          ask_volume_to_ignore -= o["volume"]
+          my_new_asks.delete_at i
+        end
+        break if ask_volume_to_ignore <= 0
+      end
     end
 
     return {
-      "volume"=>("%.6f" % my_ask_volume),
-      "amount"=>("%.6f" % my_bid_amount),
-      "profit"=>("%.6f" % profit),
+      "volume"=>("%.6f" % (my_ask_volume - ignore_ask_volume) ),
+      "amount"=>("%.6f" % my_bid_amount), # TODO decuct ignored amount
+      "profit"=>("%.6f" % profit), # TODO deduct ignored amount
       "buy_from"=>obs[1]["source"],
       "sell_to"=>obs[0]["source"],
       "orders"=>[{
