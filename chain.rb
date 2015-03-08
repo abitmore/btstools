@@ -13,15 +13,15 @@ require_relative "mylogger"
 
 # TODO write a class/function to communicate with rpc server
 
-def chain_post (data:{})
+def chain_post (data:{}, timeout:5)
   $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if data.nil? or data.empty?
     return
   end
 
   client = HTTPClient.new 
-  client.connect_timeout=5
-  client.receive_timeout=5
+  client.connect_timeout=timeout
+  client.receive_timeout=timeout
   
   myconfig = my_chain_config
   uri  = myconfig["uri"]
@@ -48,7 +48,7 @@ def chain_post (data:{})
 end
 
 # params is an array
-def chain_command (command:nil, params:nil)
+def chain_command (command:nil, params:nil, timeout:5)
   $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if command.nil? or params.nil? 
     return
@@ -60,7 +60,7 @@ def chain_command (command:nil, params:nil)
     "params"  => params,
     "id"      => 0
   }
-  return chain_post data:data
+  return chain_post data:data, timeout:timeout
 end
 
 def fetch_chain (quote="bts", base="cny", max_orders=5)
@@ -124,9 +124,9 @@ def chain_fetch (quote:"bts", base:"cny", max_orders:5)
   }
 end
 
-def chain_balance
+def chain_balance (account:nil)
 
-  account = my_chain_config["account"]
+  account = my_chain_config["account"] if account.nil?
   response_json = chain_command command:"wallet_account_balance", params:[account]
   balances = response_json["result"]
   #puts balances
