@@ -389,10 +389,10 @@ if __FILE__ == $0
 =end
 
   if ARGV[0]
+    puts "command=" + ARGV[0]
     if ARGV[1]
       args = ARGV.clone
       args.shift
-      puts "command=" + ARGV[0]
       puts "args=" + args.to_s
       parsed_args = []
       args.each {|e|
@@ -409,8 +409,19 @@ if __FILE__ == $0
     else
       result = chain_command command:ARGV[0], params:[]
     end
+
     begin
-      puts JSON.pretty_generate result
+      if result["error"] 
+        puts JSON.pretty_generate result
+        printf "ERROR.code=%s\nERROR.message=\n%s\nERROR.detail=\n%s\n", result["error"]["code"], result["error"]["message"], result["error"]["detail"]
+        puts
+      elsif String === result["result"] 
+        puts "result="
+        printf result["result"]
+        puts
+      else
+        puts JSON.pretty_generate result
+      end
     rescue
       puts result
     end
