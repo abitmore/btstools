@@ -6,8 +6,8 @@
 
 require_relative "yunbi"
 
-#me = mybalance_yunbi
-#puts me
+me = yunbi_balance
+puts me
 
 #orders = yunbi_orders type:"bid"
 orders = yunbi_orders type:"all"
@@ -19,7 +19,7 @@ puts orders
 #puts yunbi_ask price:467.89, volume:0.2245
 #puts yunbi_ask price:567.89, volume:0.2345
 #puts yunbi_orders 
-
+=begin
 o=[]
 if not orders["asks"].empty?
   o.push( {"type"=>"cancel","id"=>orders["asks"][0]["id"]} )
@@ -34,12 +34,13 @@ puts o
 
 response = yunbi_submit_orders orders:o
 puts response
+=end
 
-puts yunbi_orders 
+#puts yunbi_orders 
 
 #yunbi_cancel_orders_by_type type:"bid"
 #yunbi_cancel_orders_by_type type:"ask"
 #yunbi_cancel_orders_by_type type:"all"
 #yunbi_cancel_all_orders
 
-puts yunbi_orders 
+#puts yunbi_orders 
