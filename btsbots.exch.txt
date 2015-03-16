@@ -1,0 +1,62 @@
+prepare: register a lot of accounts.
+
+loop_bts = 16000
+loop_cny = 1000
+loop_price = 0.0625
+
+loop start
+  acc1 = this turn send bts account
+  acc2 = this turn send cny account
+
+  acc1_fee_need = 0.3
+  acc2_fee_need = 0.4
+
+  acc1_bts_balance = get bts balance of acc1
+  acc1_bts_need = loop_bts + acc1_fee_need - acc1_bts_balance
+
+  acc2_bts_balance = get bts balance of acc2
+  acc2_bts_need = acc2_fee_need - acc2_bts_balance
+
+  acc2_cny_balance = get botscny balance of acc2
+  acc2_cny_need = loop_cny - acc2_cny_balance
+
+  check balance of acc0
+
+  transfer (acc1_bts_need) bts from acc0 to acc1 (for fee, and the amount less)
+  transfer (acc2_bts_need) bts from acc0 to acc2 (for fee)
+  transfer (acc2_cny_need) cny from acc0 to acc2 (for amount less)
+
+  wait for a block
+    cmd= wait_for_block_by_number 1 relative
+
+  re-check balance of acc0
+
+  transfer (loop_bts) bts from acc1 to auction.btsbots
+  transfer (acc2_cny_balance) botscny from acc2 to auction.btsbots
+  transfer (acc2_cny_need) cny from acc2 to auction.btsbots
+
+  wait until btsbots execute
+
+  # acc1 now has btsbots.exch and botscny
+  # acc2 now has btsbots.exch and bts
+
+  acc1_exch_balance = get btsbots.exch balance from acc1
+  acc2_exch_balance = get btsbots.exch balance from acc2
+
+  transfer (acc1_exch_balance) btsbots.exch from acc1 to acc0
+  transfer (acc2_exch_balance) btsbots.exch from acc2 to acc0
+
+  acc3 = next send bts account
+  acc4 = next send cny account
+
+  acc1_cny_balance = get botscny balance from acc1
+  acc2_bts_balance = get bts balance from acc2
+
+  transfer (acc2_bts_balance-0.1) bts from acc2 to acc3
+  transfer (acc1_cny_balance) botscny from acc1 to acc4
+
+  wait for a block
+    cmd= wait_for_block_by_number 1 relative
+
+loop end
+
