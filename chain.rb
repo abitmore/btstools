@@ -166,16 +166,18 @@ def chain_balance (account:nil)
 
 end
 
-def chain_orders (quote:"bts", base:"cny", type:"all")
+def chain_orders (account:nil, quote:"bts", base:"cny", type:"all")
   ret = {
       "source"=>"chain",
       "base"=>base,
       "quote"=>quote,
       "asks"=>[],
-      "bids"=>[]
+      "bids"=>[],
+      "shorts"=>[],
+      "covers"=>[]
   }
 
-  account = my_chain_config["account"]
+  account = my_chain_config["account"] if account.nil?
   response_json = chain_command command:"wallet_market_order_list", params:[base.upcase, quote.upcase, -1, account]
   orders = response_json["result"]
   #puts orders
@@ -192,8 +194,12 @@ def chain_orders (quote:"bts", base:"cny", type:"all")
 
   need_ask = ("all" == type or "ask" == type)
   need_bid = ("all" == type or "bid" == type)
+  need_short = ("all" == type or "short" == type)
+  need_cover = ("all" == type or "cover" == type)
   asks_new=[]
   bids_new=[]
+  shorts_new=[]
+  covers_new=[]
 
 =begin
     [
@@ -232,6 +238,21 @@ def chain_orders (quote:"bts", base:"cny", type:"all")
       order_volume = e[1]["state"]["balance"].to_f / quote_precision
       item = {"id"=>e[0], "price"=>order_price, "volume"=>order_volume}
       asks_new.push item
+    elsif "short_order" == order_type and need_short
+      order_volume = e[1]["state"]["balance"].to_f / quote_precision
+      order_limit_price = e[1]["state"]["limit_price"]["ratio"].to_f * quote_precision / base_precision
+      order_price = e[1]["market_index"]["order_price"]["ratio"].to_f 
+      order_owner = e[1]["market_index"]["owner"]
+      item = {"id"=>e[0], "price"=>order_price, "interest"=>order_price, "limit_price"=>order_limit_price, 
+              "volume"=>order_volume, "owner"=>order_owner}
+      shorts_new.push item
+    elsif "cover_order" == order_type and need_cover
+      order_volume = e[1]["state"]["balance"].to_f / base_precision
+      order_interest = e[1]["interest_rate"]["ratio"].to_f * quote_precision / base_precision
+      order_owner = e[1]["market_index"]["owner"]
+      item = {"id"=>e[0], "price"=>order_price, "interest"=>order_interest, "margin_price"=>order_price,
+              "volume"=>order_volume, "owner"=>order_owner}
+      covers_new.push item
     end
   end
 
@@ -240,7 +261,44 @@ def chain_orders (quote:"bts", base:"cny", type:"all")
 
   ret["asks"]=asks_new
   ret["bids"]=bids_new
+  ret["shorts"]=shorts_new
+  ret["covers"]=covers_new
 
+  return ret
+
+end
+
+def chain_list_shorts (base:"cny")
+  ret = []
+
+  response_json = chain_command command:"blockchain_market_list_shorts", params:[base.upcase]
+  orders = response_json["result"]
+  #puts orders
+
+  if orders.nil? or orders.empty?
+    return ret
+  end
+
+  response_json = chain_command command:"blockchain_get_asset", params:[base.upcase]
+  base_precision = response_json["result"]["precision"]
+
+  order_list = []
+  orders.each { |o|
+    price_js = o["state"]["limit_price"]
+    price_limit = 0
+    if not price_js.nil?
+      price_limit = (BigDecimal.new(price_js["ratio"]) * 10000.0 / base_precision).to_f
+    end
+    interest = (BigDecimal.new(o["interest_rate"]["ratio"]) * 100.0).to_f
+    interest_s = o["interest_rate"]["ratio"]
+    bts_balance = o["collateral"]/100000.0
+    owner = o["market_index"]["owner"]
+    order_list.push ({"bts_balance"=>bts_balance, "price_limit"=>price_limit, "interest"=>interest, 
+                      "owner"=>owner, "interest_s"=>interest_s})
+  }
+
+  ret = order_list
+ 
   return ret
 
 end
@@ -299,7 +357,7 @@ def chain_new_order (quote:"bts", base:"cny", type:nil, price:nil, volume:nil, c
   end
 end
 
-def chain_submit_orders (orders:[],quote:"bts",base:"cny")
+def chain_submit_orders (account:nil, orders:[], quote:"bts", base:"cny")
   $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
 
   if orders.nil? or orders.empty?
@@ -308,7 +366,7 @@ def chain_submit_orders (orders:[],quote:"bts",base:"cny")
 
   cancel_order_ids = []
   new_orders = []
-  account = my_chain_config["account"]
+  account = my_chain_config["account"] if account.nil?
 
   orders.each { |e|
     case e["type"]
@@ -365,6 +423,46 @@ def chain_ask (quote:"bts", base:"cny", price:nil, volume:nil)
   account = my_chain_config["account"]
   #wallet_market_submit_ask <from_account_name> <sell_quantity> <sell_quantity_symbol> <ask_price> <ask_price_symbol> [allow_stupid_ask]
   response_json = chain_command command:"wallet_market_submit_ask", params:[account, volume, quote.upcase, price, base.upcase]
+
+  if not response_json["error"].nil?
+    $LOG.error (method(__method__).name) { JSON.pretty_generate response_json["error"] }
+    return response_json["error"]
+  else
+    return response_json["result"]
+  end
+
+end
+
+def chain_short (account:nil, volume:nil, quote:"bts", interest:0.0, base:"cny", price_limit:"0")
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+
+  if volume.nil?
+    return nil
+  end
+
+  account = my_chain_config["account"] if account.nil?
+  #wallet_market_submit_short <from_account_name> <short_collateral> <collateral_symbol> <interest_rate> <quote_symbol> [short_price_limit]
+  response_json = chain_command command:"wallet_market_submit_short", params:[account, volume, quote.upcase, interest, base.upcase, price_limit]
+
+  if not response_json["error"].nil?
+    $LOG.error (method(__method__).name) { JSON.pretty_generate response_json["error"] }
+    return response_json["error"]
+  else
+    return response_json["result"]
+  end
+
+end
+
+def chain_cover (account:nil, volume:0, base:"cny", id:nil)
+  $LOG.info (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
+
+  if id.nil?
+    return nil
+  end
+
+  account = my_chain_config["account"] if account.nil?
+  #wallet_market_submit_short <from_account_name> <short_collateral> <collateral_symbol> <interest_rate> <quote_symbol> [short_price_limit]
+  response_json = chain_command command:"wallet_market_cover", params:[account, volume, base.upcase, id]
 
   if not response_json["error"].nil?
     $LOG.error (method(__method__).name) { JSON.pretty_generate response_json["error"] }
