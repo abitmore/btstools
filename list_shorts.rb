@@ -4,6 +4,10 @@ require 'bigdecimal'
 
 require_relative "chain.rb"
 
+#########################################
+# pretty print short orders
+#
+
 def list_shorts (currency)
   puts currency
   r = chain_command command:"blockchain_market_list_shorts", params:[currency]

@@ -4,6 +4,10 @@ require 'bigdecimal'
 
 require_relative "chain.rb"
 
+####################################################
+# pretty print cover orders
+#
+
 def list_covers (currency)
   print currency," ",Time.now.utc.to_s,"\n"
   r = chain_command command:"blockchain_market_list_covers", params:[currency, 'BTS']
@@ -23,11 +27,7 @@ def list_covers (currency)
     owner = o["market_index"]["owner"]
     order_list.push ({"usd_balance"=>usd_balance, "price"=>price, "interest"=>interest, "owner"=>owner, "interest_s"=>interest_s, "expiration"=>expiration })
   }
-  #new_list = order_list
   new_list = order_list.sort { |o,b| o["expiration"] <=> b["expiration"] }
-  #new_list = order_list.sort { |o,b| Time.new(b["expiration"]) <=> Time.new(o["expiration"])}
-  #new_list = (order_list.sort { |o| o["usd_balance"] }).reverse
-  #new_list = (order_list.sort { |o| o["interest"] }).reverse
   new_list.each { |o|
     ex = Time.parse(o["expiration"]+' +0000') 
     if ex < Time.now
