@@ -81,31 +81,64 @@ def chain_fetch (quote:"bts", base:"cny", max_orders:5)
   response_json = chain_command command:"blockchain_market_order_book", params:[base.upcase, quote.upcase]
   ob = response_json["result"]
   #puts JSON.pretty_generate ob["result"]
+
+  shorts = []
+  if (not quote.nil?) and quote.downcase == "bts"
+    response_json = chain_command command:"blockchain_market_list_shorts", params:[base.upcase]
+    shorts = response_json["result"]
+  end
   
   #ask orders and cover orders are in same array. filter invalid short orders here. TODO maybe wrong logic here
-  asks = ob[1].delete_if {|e| e["type"] == "cover_order" #and
+  asks = ob[1].delete_if {|e| e["type"] == "cover_order" and
+                              Time.parse(e["expiration"]+' +0000') > Time.now and
+                              e["market_index"]["order_price"]["ratio"].to_f < feed_price
                               #feed_price > e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision
-                       }.sort_by {|e| e["market_index"]["order_price"]["ratio"].to_f}.first(max_orders)
-  bids = ob[0].sort_by {|e| e["market_index"]["order_price"]["ratio"].to_f}.reverse.first(max_orders)
+                       }.sort_by {|e| (e["type"] == "ask_order" and e["market_index"]["order_price"]["ratio"].to_f) or
+                                      (e["type"] == "cover_order" and e["market_index"]["order_price"]["ratio"] >= feed_price and 
+                                                                      feed_price * 0.9) or
+                                      (e["type"] == "cover_order" and feed_price) 
+                       }.first(max_orders)
+#puts ob[0].concat(shorts)
+  bids = ob[0].concat(shorts).sort_by {|e| 
+begin
+                  (e["type"] == "bid_order" and e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision) or
+                  (e["type"] == "short_order" and ( e["state"]["limit_price"].nil? ? feed_price :
+                           [ e["state"]["limit_price"]["ratio"].to_f*quote_precision/base_precision, feed_price ].min ) )
+rescue
+puts e
+end
+                       }.reverse.first(max_orders)
   
   #asks_new=Hash[*asks.map["price","volume"]]
   asks_new=[]
   bids_new=[]
+  bids.each do |e|
+    item = {
+      "price"=> ( (e["type"] == "bid_order" and e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision) or
+                  (e["type"] == "short_order" and ( e["state"]["limit_price"].nil? ? feed_price :
+                           [ e["state"]["limit_price"]["ratio"].to_f*quote_precision/base_precision, feed_price ].min ) )
+                ),
+      "volume"=>e["state"]["balance"].to_f/base_precision
+    }
+    if e["type"] == "bid_order" 
+      item["volume"] /= item["price"]
+    elsif e["type"] == "short_order"
+      item["volume"] /= 2
+    end
+    bids_new.push item
+  end
   asks.each do |e|
     item = {
-      "price"=>e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision,
+      "price"=> ((e["type"] == "ask_order" and e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision) or
+                 (e["type"] == "cover_order" and e["market_index"]["order_price"]["ratio"] >= feed_price and
+                          ( (bids.empty? or feed_price * 0.9 < bids[0]["price"]) ? 
+                                 feed_price * 0.9 : bids[0]["price"] + 0.000001 ) ) or # hack price to not match
+                 (e["type"] == "cover_order" and feed_price) 
+                ),
       "volume"=>e["state"]["balance"].to_f/quote_precision
     }
     #item["volume"] /= item["price"]
     asks_new.push item
-  end
-  bids.each do |e|
-    item = {
-      "price"=>e["market_index"]["order_price"]["ratio"].to_f*quote_precision/base_precision,
-      "volume"=>e["state"]["balance"].to_f/base_precision
-    }
-    item["volume"] /= item["price"]
-    bids_new.push item
   end
 
   # if there are orders can be matched, wait until they matched.
