@@ -13,7 +13,7 @@ require_relative "mylogger"
 
 # TODO write a class/function to communicate with rpc server
 
-def chain_post (data:{}, timeout:5)
+def chain_post (data:{}, timeout:55)
   $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if data.nil? or data.empty?
     return
@@ -48,7 +48,7 @@ def chain_post (data:{}, timeout:5)
 end
 
 # params is an array
-def chain_command (command:nil, params:nil, timeout:5)
+def chain_command (command:nil, params:nil, timeout:55)
   $LOG.debug (method(__method__).name) { {"parameters"=>method(__method__).parameters.map { |arg| "#{arg[1]} = #{eval arg[1].to_s}" }.join(', ') } }
   if command.nil? or params.nil? 
     return
@@ -118,7 +118,7 @@ end
                   (e["type"] == "short_order" and ( e["state"]["limit_price"].nil? ? feed_price :
                            [ e["state"]["limit_price"]["ratio"].to_f*quote_precision/base_precision, feed_price ].min ) )
                 ),
-      "volume"=>e["state"]["balance"].to_f/base_precision
+      "volume"=>( e["type"] == "bid_order" ? e["state"]["balance"].to_f/base_precision : e["state"]["balance"].to_f/quote_precision)
     }
     if e["type"] == "bid_order" 
       item["volume"] /= item["price"]
