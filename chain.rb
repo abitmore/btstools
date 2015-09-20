@@ -76,7 +76,7 @@ def chain_fetch (quote:"bts", base:"cny", max_orders:5)
   base_precision = response_json["result"]["precision"]
 
   response_json = chain_command command:"blockchain_median_feed_price", params:[base.upcase]
-  feed_price = response_json["result"]
+  feed_price = response_json["result"].to_f
 
   response_json = chain_command command:"blockchain_market_order_book", params:[base.upcase, quote.upcase]
   ob = response_json["result"]
