@@ -9,10 +9,10 @@ for seed in ${seeds}; do
   seed_port=`echo $seed|cut -f2 -d':'`;
 
   seed_ips=`dig "$seed_host"|grep -v '^;'|grep -E "IN\s*A"|awk '{print $5}'|sort`
-  count=`echo "$seed_ips"|wc -l`
-  if [ "$count" = "0" ]; then
-    echo "$seed\tDNS lookup failed"
+  if [ -z "$seed_ips" ]; then
+    echo "$seed\t\t\t\tDNS lookup failed"
   else
+    count=`echo "$seed_ips"|wc -l`
     if [ "$count" = "1" ]; then
       printf "%-32s" $seed
     else
@@ -25,4 +25,3 @@ for seed in ${seeds}; do
   fi
 
 done
-
