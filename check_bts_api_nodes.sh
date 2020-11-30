@@ -2,6 +2,7 @@
 
 api_nodes_file=https://raw.githubusercontent.com/bitshares/bitshares-ui/develop/app/api/apiConfig.js
 rpc_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_dynamic_global_properties",[]]}'
+rpc_query2='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_chain_properties",[]]}'
 
 api_nodes=`curl "$api_nodes_file" 2>/dev/null | grep -E "^( )*url" | grep -v fake | cut -f2 -d '"' | grep '^wss://' | cut -c5-`
 
@@ -11,7 +12,8 @@ for node in $api_nodes; do
   head_time=`curl --connect-timeout 10 -d "$rpc_query" https:$node 2>/dev/null |jq -M .|grep '"time"'|cut -f4 -d'"'`
   if [ -n "$head_time" ]; then
     head_age=`expr $(date +%s --utc) - $(date +%s --utc -d "$head_time")`
-    echo "head age $head_age"
+    chain_id=`curl --connect-timeout 10 -d "$rpc_query2" https:$node 2>/dev/null |jq -M .|grep '"chain_id"'|cut -f4 -d'"'`
+    echo "head age $head_age \t chain_id [$chain_id]"
   else
     echo "Down"
   fi
