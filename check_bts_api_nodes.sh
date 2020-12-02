@@ -19,8 +19,12 @@ for node in $api_nodes; do
       stats=`curl --connect-timeout 10 -d "$acstats_query" https:$node 2>/dev/null |jq -M .`
       total_ops=`echo "$stats" |grep '"total_ops"'|awk '{print $2}'|cut -f1 -d','`
       removed_ops=`echo "$stats" |grep '"removed_ops"'|awk '{print $2}'|cut -f1 -d','`
-      his_ops=$(($total_ops - $removed_ops))
-      echo "\tmax_ops_per_account $his_ops"
+      if [ -n "$total_ops" -a -n "$removed_ops" ]; then
+        his_ops=$(($total_ops - $removed_ops))
+        echo "\tmax_ops_per_account $his_ops"
+      else
+        echo
+      fi
     else
       echo
     fi
