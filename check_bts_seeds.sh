@@ -19,7 +19,7 @@ for seed in ${seeds}; do
       printf "%s (%d IP addresses)\n" $seed $count
     fi
     for seed_ip in $seed_ips; do
-      echo -n "${seed_ip}:${seed_port}\t";
+      printf "%-24s" "${seed_ip}:${seed_port}"
       [ -n "`echo EOF | nc ${seed_ip} $seed_port -w 10 -q 2`" ] && echo Ok || echo Failed
     done
   fi
