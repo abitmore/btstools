@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Dependencies:
+# - curl
+# - jq
+
 api_nodes_file=https://raw.githubusercontent.com/bitshares/bitshares-ui/develop/app/api/apiConfig.js
 dgprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_dynamic_global_properties",[]]}'
 cprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_chain_properties",[]]}'
