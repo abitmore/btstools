@@ -2,11 +2,11 @@ Tools related to [BitShares](https://github.com/bitshares), and some code for le
 
 Up-to-date ones:
 
-* `check_bts_api_nodes.sh`: a script to check availability of BitShares API nodes.
-* `check_bts_seeds.sh`: a script to check availability of BitShares seed nodes.
-* `download_bts_bin.sh`: a script to download latest bitshares-core binaries.
-* `chain2.rb` : CLI command wrapper and trade APIs for BitShares `ruby chain2.rb info`
-* `chain2_get_acc_his.rb` : script to get BitShares account history
+* [`check_bts_api_nodes.sh`](check_bts_api_nodes.sh): a script to check availability of BitShares API nodes.
+* [`check_bts_seeds.sh`](check_bts_seeds.sh): a script to check availability of BitShares seed nodes.
+* [`download_bts_bin.sh`](download_bts_bin.sh): a script to download latest bitshares-core binaries.
+* [`chain2.rb`](chain2.rb): CLI command wrapper and trade APIs for BitShares `ruby chain2.rb info`
+* [`chain2_get_acc_his.rb`](chain2_get_acc_his.rb): script to get BitShares account history
 
 Outdated ones:
 
