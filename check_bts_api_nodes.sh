@@ -9,6 +9,7 @@ CURL="curl --connect-timeout 10 --max-time 20"
 api_nodes_file=https://raw.githubusercontent.com/bitshares/bitshares-ui/develop/app/api/apiConfig.js
 dgprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_dynamic_global_properties",[]]}'
 cprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_chain_properties",[]]}'
+mekong_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","list_samet_funds",[]]}'
 mainnet_acstats_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_objects",[["2.6.33015"]]]}'
 testnet_acstats_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_objects",[["2.6.6"]]]}'
 mainnet_chain_id="4018d7844c78f6a6c41c6a552b898022310fc5dec06da467ee7905a8dad512c8"
@@ -29,6 +30,13 @@ for node in $api_nodes; do
         acstats_query=$mainnet_acstats_query
       else
         acstats_query=$testnet_acstats_query
+      fi
+      samet_funds=`$CURL -d "$mekong_query" https:$node 2>/dev/null`
+      samet_funds_error=`echo $samet_funds|grep 'error'`
+      if [ -z "$samet_funds_error" ]; then
+        echo -n " 6.x"
+      else
+        echo -n " 5.x"
       fi
       stats=`$CURL -d "$acstats_query" https:$node 2>/dev/null |jq -M .`
       total_ops=`echo "$stats" |grep '"total_ops"'|awk '{print $2}'|cut -f1 -d','`
