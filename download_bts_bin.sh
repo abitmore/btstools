@@ -3,7 +3,7 @@
 if [ -n "$1" ]; then
    VERSION=$1
 else
-   VERSION=`curl https://github.com/bitshares/bitshares-core/releases/latest 2>/dev/null | cut -f2 -d'"' | cut -f8 -d'/'`
+   VERSION=`curl -w %{redirect_url} https://github.com/bitshares/bitshares-core/releases/latest 2>/dev/null | cut -f8 -d'/'`
 fi
 DIR=bitshares-core-${VERSION}-linux-amd64-bin
 FILE=${DIR}.tar.bz2
