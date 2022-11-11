@@ -4,12 +4,12 @@
 # - curl
 # - jq
 
-CURL="curl --connect-timeout 10 --max-time 20"
+CURL="curl --connect-timeout 30 --max-time 60"
 
 api_nodes_file=https://raw.githubusercontent.com/bitshares/bitshares-ui/develop/app/api/apiConfig.js
 dgprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_dynamic_global_properties",[]]}'
 cprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_chain_properties",[]]}'
-mekong_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","list_samet_funds",[]]}'
+mekong61_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["login","get_available_api_sets",[]]}'
 mainnet_acstats_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_objects",[["2.6.33015"]]]}'
 testnet_acstats_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_objects",[["2.6.6"]]]}'
 mainnet_chain_id="4018d7844c78f6a6c41c6a552b898022310fc5dec06da467ee7905a8dad512c8"
@@ -19,31 +19,33 @@ api_nodes=`$CURL "$api_nodes_file" 2>/dev/null | grep -E "^( )*url" | grep -v fa
 
 for node in $api_nodes; do
   # //api.bts.mobi/ws
-  printf "%-35s" "wss:$node"
+  printf "%-37s" "wss:$node"
   head_time=`$CURL -d "$dgprops_query" https:$node 2>/dev/null |jq -M . 2>/dev/null|grep '"time"'|cut -f4 -d'"'`
   if [ -n "$head_time" ]; then
     head_age=`expr $(date +%s --utc) - $(date +%s --utc -d "$head_time")`
     chain_id=`$CURL -d "$cprops_query" https:$node 2>/dev/null |jq -M .|grep '"chain_id"'|cut -f4 -d'"'`
-    echo -n "head age $head_age s\t chain_id [$chain_id]"
+    printf "%-21s" "head age ${head_age} s "
+    echo -n "chain_id [${chain_id}] "
     if [ "x$chain_id" = "x$mainnet_chain_id" -o "x$chain_id" = "x$testnet_chain_id" ]; then # BitShares Mainnet or Testnet
       if [ "x$chain_id" = "x$mainnet_chain_id" ]; then # mainnet
         acstats_query=$mainnet_acstats_query
       else
         acstats_query=$testnet_acstats_query
       fi
-      samet_funds=`$CURL -d "$mekong_query" https:$node 2>/dev/null`
-      samet_funds_error=`echo $samet_funds|grep 'error'`
-      if [ -z "$samet_funds_error" ]; then
-        echo -n " 6.x"
+      available_api_sets=`$CURL -d "$mekong61_query" https:$node 2>/dev/null`
+      available_api_sets_error=`echo $available_api_sets|grep 'error'`
+      if [ -z "$available_api_sets_error" ]; then
+        printf "%-6s" "6.1.x"
       else
-        echo -n " 5.x"
+        printf "%-6s" "6.0.x"
+      fi
       fi
       stats=`$CURL -d "$acstats_query" https:$node 2>/dev/null |jq -M .`
       total_ops=`echo "$stats" |grep '"total_ops"'|awk '{print $2}'|cut -f1 -d','`
       removed_ops=`echo "$stats" |grep '"removed_ops"'|awk '{print $2}'|cut -f1 -d','`
       if [ -n "$total_ops" -a -n "$removed_ops" ]; then
         his_ops=$(($total_ops - $removed_ops))
-        echo "\tmax_ops_per_account $his_ops"
+        echo " max_ops_per_account $his_ops"
       else
         echo
       fi
