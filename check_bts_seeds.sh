@@ -1,6 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 
-seeds_file=https://raw.githubusercontent.com/bitshares/bitshares-core/master/libraries/egenesis/seed-nodes.txt
+BRANCH=master
+if [ -n "$1" ]; then
+  BRANCH=$1
+fi
+
+if [ "${BRANCH}" == "testnet" ]; then
+  seeds_file=https://raw.githubusercontent.com/bitshares/bitshares-core/${BRANCH}/libraries/egenesis/seed-nodes-testnet.txt
+else
+  seeds_file=https://raw.githubusercontent.com/bitshares/bitshares-core/${BRANCH}/libraries/egenesis/seed-nodes.txt
+fi
 
 seeds=`curl $seeds_file 2>/dev/null | tail -n "+2" | cut -f2 -d'"'`
 
