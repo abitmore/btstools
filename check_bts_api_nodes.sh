@@ -10,6 +10,7 @@ api_nodes_file=https://raw.githubusercontent.com/bitshares/bitshares-ui/develop/
 dgprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_dynamic_global_properties",[]]}'
 cprops_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_chain_properties",[]]}'
 mekong61_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["login","get_available_api_sets",[]]}'
+suez_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_required_fees",[[[77,{}]],"1.3.0"]]}'
 mainnet_acstats_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_objects",[["2.6.33015"]]]}'
 testnet_acstats_query='{"method":"call","id":1,"jsonrpc":"2.0","params":["database","get_objects",[["2.6.6"]]]}'
 mainnet_chain_id="4018d7844c78f6a6c41c6a552b898022310fc5dec06da467ee7905a8dad512c8"
@@ -32,13 +33,18 @@ for node in $api_nodes; do
       else
         acstats_query=$testnet_acstats_query
       fi
-      available_api_sets=`$CURL -d "$mekong61_query" https:$node 2>/dev/null`
-      available_api_sets_error=`echo $available_api_sets|grep 'error'`
-      if [ -z "$available_api_sets_error" ]; then
-        printf "%-6s" "6.1.x"
+      fee_op_77=`$CURL -d "$suez_query" https:$node 2>/dev/null`
+      fee_op_77_error=`echo $fee_op_77|grep 'error'`
+      if [ -z "$fee_op_77_error" ]; then
+        printf "%-6s" "7.0.x"
       else
-        printf "%-6s" "6.0.x"
-      fi
+        available_api_sets=`$CURL -d "$mekong61_query" https:$node 2>/dev/null`
+        available_api_sets_error=`echo $available_api_sets|grep 'error'`
+        if [ -z "$available_api_sets_error" ]; then
+          printf "%-6s" "6.1.x"
+        else
+          printf "%-6s" "6.0.x"
+        fi
       fi
       stats=`$CURL -d "$acstats_query" https:$node 2>/dev/null |jq -M .`
       total_ops=`echo "$stats" |grep '"total_ops"'|awk '{print $2}'|cut -f1 -d','`
