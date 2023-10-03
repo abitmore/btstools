@@ -17,7 +17,7 @@ for seed in ${seeds}; do
   seed_host=`echo $seed|cut -f1 -d':'`;
   seed_port=`echo $seed|cut -f2 -d':'`;
 
-  seed_ips=`dig "$seed_host"|grep -v '^;'|grep -E "IN\s*A"|awk '{print $5}'|sort`
+  seed_ips=`dig "$seed_host"|grep -v '^;'|grep -E "IN\s*A"|awk '{print $5}'|sort -V`
   if [ -z "$seed_ips" ]; then
     printf "%-62s" $seed
     echo "DNS lookup failed"
